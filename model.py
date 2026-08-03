@@ -24,8 +24,9 @@ import numpy as np
 def greedy_action(q_table, state):
     return int(np.argmax(q_table[state]))
 
-# Step 4 - sample_random_action (not yet solved)
-# TODO: implement
+# Step 4 - sample_random_action
+def sample_random_action(action_space):
+    return int(action_space.sample())
 
 # Step 5 - should_explore (not yet solved)
 # TODO: implement
