@@ -34,8 +34,11 @@ import numpy as np
 def should_explore(epsilon, rng):
     return bool(rng.random() < epsilon)
 
-# Step 6 - epsilon_greedy_action (not yet solved)
-# TODO: implement
+# Step 6 - epsilon_greedy_action
+def epsilon_greedy_action(q_table, state, epsilon, action_space, rng):
+    if should_explore(epsilon, rng):
+        return sample_random_action(action_space)
+    return greedy_action(q_table, state)
 
 # Step 7 - decay_epsilon (not yet solved)
 # TODO: implement
