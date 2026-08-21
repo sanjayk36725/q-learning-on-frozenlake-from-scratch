@@ -143,8 +143,21 @@ def train_q_learning(env, num_episodes, seed=None,
 def extract_greedy_policy(q_table):
     return np.argmax(q_table, axis=1).astype(np.int64)
 
-# Step 15 - run_greedy_episode (not yet solved)
-# TODO: implement
+# Step 15 - run_greedy_episode
+def run_greedy_episode(env, policy, seed=None, max_steps=100):
+    state, _ = env.reset(seed=seed)
+
+    for _ in range(max_steps):
+        action = int(policy[state])
+
+        next_state, reward, terminated, truncated, _ = env.step(action)
+
+        if terminated or truncated:
+            return bool(reward > 0)
+
+        state = next_state
+
+    return False
 
 # Step 16 - evaluate_success_rate (not yet solved)
 # TODO: implement
