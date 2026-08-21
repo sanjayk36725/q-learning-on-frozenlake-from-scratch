@@ -114,8 +114,30 @@ def run_training_episode(env, q_table, epsilon, alpha, gamma, rng, max_steps):
 
     return float(total_reward)
 
-# Step 13 - train_q_learning (not yet solved)
-# TODO: implement
+# Step 13 - train_q_learning
+def train_q_learning(env, num_episodes, seed=None,
+                      alpha=0.8, gamma=0.95,
+                      epsilon_start=1.0, epsilon_end=0.01,
+                      epsilon_decay=0.995, max_steps=100):
+    rng = np.random.default_rng(seed)
+    env.action_space.seed(seed)
+    env.reset(seed=seed)
+
+    n_states = env.observation_space.n
+    n_actions = env.action_space.n
+    q_table = init_q_table(n_states, n_actions)
+
+    epsilon = epsilon_start
+    episode_returns = []
+
+    for _ in range(num_episodes):
+        ep_return = run_training_episode(
+            env, q_table, epsilon, alpha, gamma, rng, max_steps
+        )
+        episode_returns.append(ep_return)
+        epsilon = decay_epsilon(epsilon, epsilon_decay, epsilon_end)
+
+    return q_table, episode_returns
 
 # Step 14 - extract_greedy_policy (not yet solved)
 # TODO: implement
