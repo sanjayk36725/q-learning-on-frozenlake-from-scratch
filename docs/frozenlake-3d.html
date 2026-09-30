@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Q-Learning FrozenLake — 3D Interactive Demo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:Segoe UI,Arial,sans-serif;background:#08111f;color:#fff}
+#app{width:100%;height:100%}
+canvas{display:block}
+.panel{position:absolute;background:rgba(5,12,24,.86);border:1px solid rgba(255,255,255,.16);border-radius:14px;backdrop-filter:blur(10px);box-shadow:0 12px 32px rgba(0,0,0,.28);z-index:10}
+#info{left:18px;top:18px;width:350px;max-height:calc(100vh - 36px);overflow:auto;padding:18px}
+#metrics{right:18px;top:18px;width:360px;padding:16px}
+#controls{left:18px;bottom:18px;width:calc(100% - 36px);padding:12px}
+h1{font-size:20px;margin:0 0 8px;color:#8ee7ff}
+h2{font-size:14px;margin:14px 0 8px;color:#8ee7ff}
+p{font-size:12px;line-height:1.55;color:#d5dfeb;margin:7px 0}
+.eq{font-family:Consolas,monospace;background:rgba(255,255,255,.06);padding:9px;border-radius:8px;font-size:11px;overflow:auto}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.metric{padding:9px;border:1px solid rgba(142,231,255,.18);border-radius:9px;background:rgba(142,231,255,.06)}
+.label{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#8ee7ff}
+.value{font-size:16px;font-weight:700;margin-top:3px}
+button{border:0;border-radius:8px;padding:9px 13px;background:#8ee7ff;color:#03111d;font-weight:700;cursor:pointer;margin:3px}
+button.secondary{background:#223249;color:#dfeaf5}
+button:hover{filter:brightness(1.08)}
+.row{display:flex;flex-wrap:wrap;gap:3px}
+#chartWrap{height:180px;margin-top:8px}
+.small{font-size:10px;color:#aebccc}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:700;margin-right:5px}
+.phase1{background:#385d7a}.phase2{background:#735b28}.phase3{background:#275d45}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.legend span{font-size:10px;color:#bfcbd8}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px}
+#status{margin-top:7px;font-size:11px;color:#9bc5da}
+@media(max-width:900px){
+  #info{width:300px}
+  #metrics{width:300px}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="info" class="panel">
+  <h1>🧊 FrozenLake Q-Learning — 3D</h1>
+  <p>Interactive visualization inspired by the uploaded 3D roadmap. It keeps the same ideas—training phases, epsilon decay, Q-values, controls, and learning metrics—but maps them directly onto the FrozenLake problem.</p>
+  <h2>Q-Learning Update</h2>
+  <div class="eq">Q(s,a) ← Q(s,a) + α[r + γ max Q(s′,a′) − Q(s,a)]</div>
+  <h2>Environment</h2>
+  <p><b>Map:</b> S F F F / F H F H / F F F H / H F F G</p>
+  <p><b>S</b> = start · <b>H</b> = hole · <b>G</b> = goal. This educational demo uses deterministic movement so the effect of Q-learning is easy to inspect visually.</p>
+  <div class="legend">
+    <span><i class="dot" style="background:#43c6ff"></i>low Q</span>
+    <span><i class="dot" style="background:#ffd166"></i>medium Q</span>
+    <span><i class="dot" style="background:#4be37b"></i>high Q</span>
+  </div>
+  <h2>Training phase</h2>
+  <div id="phaseBadge"><span class="badge phase1">EXPLORATION</span></div>
+  <div id="phaseText" class="small">Early episodes: the agent explores and Q-values are mostly near zero.</div>
+  <div id="status"></div>
+</div>
+
+<div id="metrics" class="panel">
+  <div class="grid">
+    <div class="metric"><div class="label">Episode</div><div id="episode" class="value">0</div></div>
+    <div class="metric"><div class="label">Success</div><div id="success" class="value">0%</div></div>
+    <div class="metric"><div class="label">Epsilon</div><div id="epsilon" class="value">1.00</div></div>
+    <div class="metric"><div class="label">Best Q</div><div id="bestQ" class="value">0.00</div></div>
+  </div>
+  <div id="chartWrap"><canvas id="chart"></canvas></div>
+</div>
+
+<div id="controls" class="panel">
+  <div class="row">
+    <button onclick="train(100)">▶ Train 100</button>
+    <button onclick="train(1000)">⚡ Train 1,000</button>
+    <button onclick="runGreedyEpisode()">🎯 Run Learned Policy</button>
+    <button class="secondary" onclick="toggleAuto()">⏱ Auto Train</button>
+    <button class="secondary" onclick="toggleRotation()">🔄 Rotate</button>
+    <button class="secondary" onclick="resetDemo()">↻ Reset</button>
+  </div>
+</div>
+
+<script>
+const MAP = [
+  ['S','F','F','F'],
+  ['F','H','F','H'],
+  ['F','F','F','H'],
+  ['H','F','F','G']
+];
+const ROWS=4, COLS=4, STATES=16, ACTIONS=4;
+const ACTIONS_VEC=[[-1,0],[1,0],[0,-1],[0,1]];
+const ACTION_NAMES=['UP','DOWN','LEFT','RIGHT'];
+const ALPHA=0.10, GAMMA=0.99, MIN_EPSILON=0.01, DECAY=0.995;
+let q=Array.from({length:STATES},()=>Array(ACTIONS).fill(0));
+let epsilon=1.0, episode=0, successes=0, rotating=false, autoTimer=null;
+let scene,camera,renderer,agent,chart;
+let cellGroups=[], qBars=[], arrows=[], episodePath=null;
+
+function idx(r,c){return r*COLS+c}
+function rc(s){return [Math.floor(s/COLS),s%COLS]}
+function isTerminal(s){const [r,c]=rc(s);return MAP[r][c]==='H'||MAP[r][c]==='G'}
+
+function chooseAction(state, explore=true){
+  if(explore && Math.random()<epsilon) return Math.floor(Math.random()*ACTIONS);
+  const row=q[state];
+  const max=Math.max(...row);
+  const best=row.map((v,i)=>v===max?i:-1).filter(i=>i>=0);
+  return best[Math.floor(Math.random()*best.length)];
+}
+
+function step(state,action){
+  const [r,c]=rc(state);
+  let nr=r+ACTIONS_VEC[action][0], nc=c+ACTIONS_VEC[action][1];
+  if(nr<0||nr>=ROWS||nc<0||nc>=COLS){nr=r;nc=c}
+  const ns=idx(nr,nc);
+  const tile=MAP[nr][nc];
+  return {nextState:ns,reward:tile==='G'?1:0,done:isTerminal(ns)}
+}
+
+function trainOne(){
+  let state=0, done=false, gotGoal=false;
+  for(let t=0;t<100 && !done;t++){
+    const action=chooseAction(state,true);
+    const {nextState,reward,done:terminal}=step(state,action);
+    const target=terminal?reward:reward+GAMMA*Math.max(...q[nextState]);
+    q[state][action]+=ALPHA*(target-q[state][action]);
+    state=nextState; done=terminal;
+    if(reward>0) gotGoal=true;
+  }
+  episode++;
+  epsilon=Math.max(epsilon*DECAY,MIN_EPSILON);
+  if(gotGoal) successes++;
+  return gotGoal;
+}
+
+function train(n){
+  for(let i=0;i<n;i++) trainOne();
+  updateAll();
+  addChartPoint();
+  setStatus('Training updated the Q-table and 3D value bars.');
+}
+
+function initScene(){
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x08111f);
+  scene.fog=new THREE.Fog(0x08111f,28,65);
+
+  camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.1,200);
+  camera.position.set(15,22,24);
+  camera.lookAt(0,0,0);
+
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  document.getElementById('app').appendChild(renderer.domElement);
+
+  scene.add(new THREE.HemisphereLight(0xcdefff,0x152238,1.6));
+  const sun=new THREE.DirectionalLight(0xffffff,1.8);
+  sun.position.set(10,24,12);
+  sun.castShadow=true;
+  scene.add(sun);
+
+  createLake();
+  createAgent();
+  initChart();
+  window.addEventListener('resize',onResize);
+  animate();
+}
+
+function createLake(){
+  const ground=new THREE.Mesh(
+    new THREE.BoxGeometry(22,0.5,22),
+    new THREE.MeshStandardMaterial({color:0x0f2338,metalness:.1,roughness:.72})
+  );
+  ground.position.y=-1.0;
+  ground.receiveShadow=true;
+  scene.add(ground);
+
+  const spacing=4.5, offset=(COLS-1)*spacing/2;
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const type=MAP[r][c], x=c*spacing-offset, z=r*spacing-offset;
+      const group=new THREE.Group();
+      group.userData={state:idx(r,c),baseY:0};
+      const surface=new THREE.Mesh(
+        new THREE.BoxGeometry(3.8,.7,3.8),
+        new THREE.MeshStandardMaterial({color:colorFor(type),metalness:.05,roughness:.7,transparent:type==='H',opacity:type==='H'?.78:1})
+      );
+      surface.position.y=0;
+      surface.castShadow=true; surface.receiveShadow=true;
+      group.add(surface);
+
+      const label=makeLabel(type);
+      label.position.set(x,2.3,z);
+      scene.add(label);
+
+      group.position.set(x,0,z);
+      scene.add(group);
+      cellGroups.push(group);
+
+      const barSet=[];
+      for(let a=0;a<ACTIONS;a++){
+        const bar=new THREE.Mesh(
+          new THREE.BoxGeometry(.38,.12,.38),
+          new THREE.MeshStandardMaterial({color:colorForQ(0),emissive:colorForQ(0),emissiveIntensity:.15})
+        );
+        const dx=(a===2?-1.25:a===3?1.25:0);
+        const dz=(a===0?-1.25:a===1?1.25:0);
+        bar.position.set(x+dx,.48,z+dz);
+        bar.castShadow=true;
+        scene.add(bar);
+        barSet.push(bar);
+      }
+      qBars.push(barSet);
+      const arrow=new THREE.ArrowHelper(new THREE.Vector3(1,0,0),new THREE.Vector3(x,1.05,z),1.0,0xffffff,.26,.18);
+      scene.add(arrow); arrows.push(arrow);
+    }
+  }
+}
+
+function colorFor(type){
+  return {S:0x2c9fe6,F:0x174f78,H:0x28303d,G:0xd8a928}[type];
+}
+function colorForQ(v){
+  if(v<.33) return 0x43c6ff;
+  if(v<.66) return 0xffd166;
+  return 0x4be37b;
+}
+function makeLabel(text){
+  const canvas=document.createElement('canvas');canvas.width=256;canvas.height=128;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,256,128);ctx.fillStyle='rgba(0,0,0,.66)';ctx.roundRect(18,25,220,72,18);ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='bold 62px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,128,62);
+  const tex=new THREE.CanvasTexture(canvas);
+  const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));
+  spr.scale.set(2.3,1.15,1);
+  return spr;
+}
+function createAgent(){
+  const geo=new THREE.SphereGeometry(.65,32,24);
+  const mat=new THREE.MeshStandardMaterial({color:0x8ee7ff,emissive:0x125d7a,emissiveIntensity:1.3,metalness:.2,roughness:.35});
+  agent=new THREE.Mesh(geo,mat);
+  agent.castShadow=true;
+  scene.add(agent);
+  placeAgent(0);
+}
+function placeAgent(state){
+  const [r,c]=rc(state), spacing=4.5, offset=(COLS-1)*spacing/2;
+  agent.position.set(c*spacing-offset,1.15,r*spacing-offset);
+}
+
+function updateAll(){
+  for(let s=0;s<STATES;s++){
+    const max=Math.max(...q[s]), scale=Math.max(.08,Math.min(3.0,max*3.0));
+    for(let a=0;a<ACTIONS;a++){
+      const v=q[s][a], h=Math.max(.08,v*3.0+.04);
+      const bar=qBars[s][a];
+      bar.scale.y=h/.12;
+      bar.position.y=.5+h/2;
+      const col=colorForQ(v);
+      bar.material.color.setHex(col);
+      bar.material.emissive.setHex(col);
+      bar.material.emissiveIntensity=.15;
+    }
+    const [r,c]=rc(s);
+    if(isTerminal(s)||max<=0.001){arrows[s].visible=false;continue}
+    const a=q[s].indexOf(max);
+    const dirs=[new THREE.Vector3(0,0,-1),new THREE.Vector3(0,0,1),new THREE.Vector3(-1,0,0),new THREE.Vector3(1,0,0)];
+    arrows[s].visible=true;
+    arrows[s].setDirection(dirs[a]);
+    arrows[s].setLength(1.15,.28,.18);
+  }
+  document.getElementById('episode').textContent=episode;
+  document.getElementById('epsilon').textContent=epsilon.toFixed(2);
+  const recentSuccess=episode?Math.round((successes/episode)*100):0;
+  document.getElementById('success').textContent=recentSuccess+'%';
+  document.getElementById('bestQ').textContent=Math.max(...q.flat()).toFixed(2);
+  updatePhase();
+}
+function updatePhase(){
+  let badge,text;
+  if(episode<100){badge='<span class="badge phase1">EXPLORATION</span>';text='Early episodes: the agent explores and Q-values are mostly near zero.'}
+  else if(episode<600){badge='<span class="badge phase2">LEARNING</span>';text='Q-values accumulate experience while epsilon decays toward exploitation.'}
+  else {badge='<span class="badge phase3">MASTERY</span>';text='The learned policy is largely greedy and high-value actions are visible as taller bars.'}
+  document.getElementById('phaseBadge').innerHTML=badge;
+  document.getElementById('phaseText').textContent=text;
+}
+
+function runGreedyEpisode(){
+  let state=0, path=[state], steps=0;
+  while(!isTerminal(state)&&steps<50){
+    const action=chooseAction(state,false);
+    const result=step(state,action);
+    state=result.nextState; path.push(state); steps++;
+    if(result.done)break;
+  }
+  animatePath(path);
+}
+function animatePath(path){
+  if(episodePath)scene.remove(episodePath);
+  const points=path.map(s=>{
+    const [r,c]=rc(s),spacing=4.5,offset=(COLS-1)*spacing/2;
+    return new THREE.Vector3(c*spacing-offset,1.2,r*spacing-offset);
+  });
+  episodePath=new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(points),
+    new THREE.LineBasicMaterial({color:0x8ee7ff,transparent:true,opacity:.9})
+  );
+  scene.add(episodePath);
+  let i=0;
+  const timer=setInterval(()=>{
+    if(i>=points.length){clearInterval(timer);return}
+    agent.position.copy(points[i]);i++;
+  },160);
+  setStatus(path[path.length-1]===15?'Learned policy reached the goal.': 'Learned policy ended at a terminal state before the goal.');
+}
+
+function initChart(){
+  const ctx=document.getElementById('chart').getContext('2d');
+  chart=new Chart(ctx,{type:'line',data:{labels:[],datasets:[
+    {label:'Success',data:[],borderColor:'#8ee7ff',backgroundColor:'rgba(142,231,255,.08)',tension:.25,fill:true},
+    {label:'Epsilon',data:[],borderColor:'#ffd166',backgroundColor:'rgba(255,209,102,.04)',tension:.25,fill:true}
+  ]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{labels:{color:'#cdd9e6',font:{size:9}}}},scales:{
+    x:{ticks:{color:'#8b9aad',font:{size:8}},grid:{color:'rgba(255,255,255,.04)'}},
+    y:{min:0,max:100,ticks:{color:'#8b9aad',font:{size:8}},grid:{color:'rgba(255,255,255,.05)'}}
+  }}});
+}
+function addChartPoint(){
+  if(!chart)return;
+  chart.data.labels.push(episode);
+  chart.data.datasets[0].data.push(episode?Math.round(successes/episode*100):0);
+  chart.data.datasets[1].data.push(Math.round(epsilon*100));
+  if(chart.data.labels.length>40){
+    chart.data.labels.shift();chart.data.datasets[0].data.shift();chart.data.datasets[1].data.shift();
+  }
+  chart.update('none');
+}
+function toggleAuto(){
+  if(autoTimer){clearInterval(autoTimer);autoTimer=null;setStatus('Auto training paused.');return}
+  autoTimer=setInterval(()=>{train(10)},80);
+  setStatus('Auto training is running.');
+}
+function toggleRotation(){rotating=!rotating;setStatus(rotating?'Camera rotation enabled.':'Camera rotation paused.')}
+function resetDemo(){
+  if(autoTimer){clearInterval(autoTimer);autoTimer=null}
+  q=Array.from({length:STATES},()=>Array(ACTIONS).fill(0));
+  epsilon=1;episode=0;successes=0;
+  if(episodePath){scene.remove(episodePath);episodePath=null}
+  placeAgent(0);
+  chart.data.labels=[];chart.data.datasets.forEach(d=>d.data=[]);chart.update('none');
+  updateAll();setStatus('Q-table reset to zeros.');
+}
+function setStatus(t){document.getElementById('status').textContent=t}
+
+function animate(){
+  requestAnimationFrame(animate);
+  if(rotating){
+    const t=performance.now()*.00025;
+    const radius=28;
+    camera.position.x=Math.cos(t)*radius;
+    camera.position.z=Math.sin(t)*radius;
+    camera.position.y=20+Math.sin(t*.55)*3;
+    camera.lookAt(0,0,0);
+  }
+  const t=performance.now()*.002;
+  agent.position.y=1.1+Math.sin(t)*.12;
+  renderer.render(scene,camera);
+}
+function onResize(){
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+}
+
+initScene();
+updateAll();
+setStatus('Ready. Train the agent to see the Q-value landscape change.');
+</script>
+</body>
+</html>
