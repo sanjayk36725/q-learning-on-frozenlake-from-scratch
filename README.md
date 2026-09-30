@@ -132,6 +132,90 @@ Q(s,a) ← Q(s,a) + α [ r + γ·max Q(s',a') - Q(s,a) ]
 
 ---
 
+## 🔄 Algorithm Flowchart
+
+```mermaid
+graph TD
+    A["🚀 Start Training"] --> B["Initialize Q-Table<br/>(All zeros)"]
+    B --> C["Set ε = 1.0<br/>(100% Explore)"]
+    C --> D["For Each Episode"]
+    D --> E["Reset State<br/>to Start"]
+    E --> F{Episode<br/>Complete?}
+    F -->|No| G["Choose Action<br/>ε-Greedy"]
+    G --> H{Explore or<br/>Exploit?}
+    H -->|Explore ε| I["Random Action"]
+    H -->|Exploit 1-ε| J["Best Q-Action"]
+    I --> K["Execute Action"]
+    J --> K
+    K --> L["Observe<br/>Reward & Next State"]
+    L --> M["Calculate TD-Target<br/>r + γ·maxQ"]
+    M --> N["Update Q-Value<br/>Q ← Q + α·error"]
+    N --> O["Move to Next State"]
+    O --> F
+    F -->|Yes| P["Decay ε<br/>ε ← ε × decay_rate"]
+    P --> Q{All Episodes<br/>Done?}
+    Q -->|No| D
+    Q -->|Yes| R["Extract Greedy Policy"]
+    R --> S["Evaluate Success Rate"]
+    S --> T["✅ Training Complete"]
+    
+    style A fill:#90EE90
+    style T fill:#90EE90
+    style G fill:#FFB6C1
+    style M fill:#87CEEB
+    style N fill:#87CEEB
+```
+
+---
+
+## 🎯 Agent Decision Tree
+
+```mermaid
+graph LR
+    A["Agent at State S"] --> B["Has Q-values<br/>for all actions?"]
+    B -->|Yes| C["Calculate Max Q"]
+    B -->|No| D["All Q = 0"]
+    C --> E{Random Number<br/>< ε?}
+    D --> E
+    E -->|YES| F["🎲 Explore<br/>Random Action"]
+    E -->|NO| G["🎯 Exploit<br/>Best Q-Action"]
+    F --> H["Execute & Learn"]
+    G --> H
+    H --> I["Receive Reward"]
+    I --> J["Update Q-Table"]
+    J --> K["Move to S'"]
+    
+    style F fill:#FFE4B5
+    style G fill:#B0E0E6
+    style H fill:#DDA0DD
+```
+
+---
+
+## 📈 Training Progress Journey
+
+```mermaid
+graph LR
+    A["Episode 1<br/>0% Success"] -->|Chaotic<br/>Exploration| B["Episode 100<br/>15% Success"]
+    B -->|Learning<br/>Phase| C["Episode 300<br/>45% Success"]
+    C -->|Acceleration| D["Episode 600<br/>75% Success"]
+    D -->|Refinement| E["Episode 1000<br/>85% Success"]
+    
+    A --> A1["ε = 1.0<br/>Random 100%"]
+    B --> B1["ε = 0.61<br/>Random 61%"]
+    C --> C1["ε = 0.22<br/>Random 22%"]
+    D --> D1["ε = 0.002<br/>Random 0.2%"]
+    E --> E1["ε ≈ 0<br/>Mostly Greedy"]
+    
+    style A fill:#FF6B6B
+    style B fill:#FFA500
+    style C fill:#FFD700
+    style D fill:#90EE90
+    style E fill:#32CD32
+```
+
+---
+
 ## 🎮 Project Structure
 
 ```
@@ -187,6 +271,69 @@ MAX_STEPS = 100
 
 ---
 
+## 🗺️ 3D Learning Roadmap
+
+### Agent Evolution Across Phases
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        Q-LEARNING DEVELOPMENT ROADMAP                   │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    PHASE 1: CLUELESS               PHASE 2: LEARNING              PHASE 3: MASTERY
+    (Episodes 0-100)                (Episodes 100-600)            (Episodes 600+)
+    
+         🤪                              🧠                            🎯
+      Confused                      Building Knowledge           Optimal Policy
+    
+    ┌─────────────────────────┐  ┌──────────────────────┐  ┌─────────────────┐
+    │  Q-Table: Random Walk   │  │  Q-Table: Patterns   │  │ Q-Table: Peaked │
+    │  ε = 1.0 (Explore 100%) │  │  ε = 0.3 (Mix)       │  │ ε ≈ 0 (Exploit) │
+    │  Success: 0-20%         │  │  Success: 30-70%     │  │ Success: 80-95% │
+    └─────────────────────────┘  └──────────────────────┘  └─────────────────┘
+            ▲                            ▲                         ▲
+            │                            │                         │
+       Trial & Error            Smart Exploration          Goal-Oriented
+       Lots of Deaths           Better Path Finding        Direct Routes
+       No Clue About Goal       Learning What Works        Knows Everything
+```
+
+### Architecture Layers (3D View)
+
+```
+        ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+        ┃     📊 EVALUATION LAYER (Steps 14-16)     ┃  ← Test & Measure
+        ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+        ┃  Extract Policy │ Run Greedy │ Success Rate ┃
+        ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+        
+        ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+        ┃    🎓 TRAINING LAYER (Steps 11-13)       ┃  ← Main Loop
+        ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+        ┃  Interaction │ Episode │ Full Training Loop ┃
+        ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+        
+        ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+        ┃    🧠 LEARNING LAYER (Steps 8-10)        ┃  ← Core Algorithm
+        ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+        ┃ TD-Target │ TD-Error │ Q-Learning Update ┃
+        ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+        
+        ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+        ┃  🎲 EXPLORATION LAYER (Steps 6-7)        ┃  ← Decision Making
+        ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+        ┃ ε-Greedy Action │ Epsilon Decay         ┃
+        ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+        
+        ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+        ┃  🎯 ACTION LAYER (Steps 1-5)             ┃  ← Foundations
+        ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+        ┃ Q-Table │ Max Q │ Greedy │ Random │ Explore ┃
+        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+```
+
+---
+
 ## 📈 Expected Results
 
 After training:
@@ -198,6 +345,31 @@ Typical progression:
 - Episodes 0–100: Chaotic, lots of failing
 - Episodes 100–500: Steady improvement
 - Episodes 500+: Consistent success (plateau)
+
+---
+
+## 🌐 Interactive 3D Visualization
+
+**See the learning evolution in action!**
+
+Open `3d-roadmap.html` in your browser to explore:
+- 📊 Real-time learning progress across phases
+- 📈 Success rate and epsilon decay visualization
+- 🎨 Interactive 3D roadmap showing agent evolution
+- ⚙️ Phase-by-phase statistics and strategy changes
+
+```bash
+# Simply open in your browser
+open 3d-roadmap.html
+# or
+start 3d-roadmap.html  # Windows
+```
+
+Features:
+- ▶️ Play animation to watch training progress (0→1000 episodes)
+- 🔄 Auto-rotate camera for immersive view
+- ⟲ Reset to see fresh visualization
+- 🎯 Switch between phases to compare learning stages
 
 ---
 
