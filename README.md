@@ -279,13 +279,13 @@ MAX_STEPS = 100
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                        Q-LEARNING DEVELOPMENT ROADMAP                   │
 └─────────────────────────────────────────────────────────────────────────┘
-            |                            |                      | 
-   PHASE 1: CLUELESS             PHASE 2: LEARNING      PHASE 3: MASTERY
-    (Episodes 0-100)            (Episodes 100-600)     (Episodes 600+)
+
+    PHASE 1: CLUELESS               PHASE 2: LEARNING              PHASE 3: MASTERY
+    (Episodes 0-100)                (Episodes 100-600)            (Episodes 600+)
     
          🤪                              🧠                            🎯
       Confused                      Building Knowledge           Optimal Policy
-          |                                 |                        |
+    
     ┌─────────────────────────┐  ┌──────────────────────┐  ┌─────────────────┐
     │  Q-Table: Random Walk   │  │  Q-Table: Patterns   │  │ Q-Table: Peaked │
     │  ε = 1.0 (Explore 100%) │  │  ε = 0.3 (Mix)       │  │ ε ≈ 0 (Exploit) │
@@ -302,15 +302,15 @@ MAX_STEPS = 100
 
 ```
         ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-        ┃    📊EVALUATION LAYER (Steps 14-16)      ┃  ← Test & Measure
+        ┃     📊 EVALUATION LAYER (Steps 14-16)     ┃  ← Test & Measure
         ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-        ┃Extract Policy │ Run Greedy │ Success Rate┃
+        ┃  Extract Policy │ Run Greedy │ Success Rate ┃
         ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
         
         ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-        ┃    🎓TRAINING LAYER (Steps 11-13)        ┃  ← Main Loop
+        ┃    🎓 TRAINING LAYER (Steps 11-13)       ┃  ← Main Loop
         ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-        ┃Interaction │ Episode │ Full Training Loop┃
+        ┃  Interaction │ Episode │ Full Training Loop ┃
         ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
         
         ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -322,13 +322,13 @@ MAX_STEPS = 100
         ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
         ┃  🎲 EXPLORATION LAYER (Steps 6-7)        ┃  ← Decision Making
         ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-        ┃ ε-Greedy Action │ Epsilon Decay          ┃
+        ┃ ε-Greedy Action │ Epsilon Decay         ┃
         ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
         
         ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
         ┃  🎯 ACTION LAYER (Steps 1-5)             ┃  ← Foundations
         ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-        ┃ Q-Table│Max Q│ Greedy │ Random │ Explore ┃
+        ┃ Q-Table │ Max Q │ Greedy │ Random │ Explore ┃
         ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
 
