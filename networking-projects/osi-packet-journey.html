@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OSI Packet Journey — Networking Lab</title>
+<style>
+:root{color-scheme:dark;--bg:#091220;--panel:#111f32;--line:#233c55;--cyan:#75e5ff;--muted:#b7c6d8;--green:#63e6a2}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#183551 0,#091220 55%);color:#f3f8ff;font-family:Segoe UI,Arial,sans-serif;min-height:100vh}
+main{max-width:1100px;margin:auto;padding:24px 18px 40px}h1{margin:0 0 8px;font-size:clamp(25px,4vw,38px)}.sub{color:var(--muted);line-height:1.6;max-width:780px}
+.cards{display:grid;grid-template-columns:repeat(7,minmax(110px,1fr));gap:9px;margin:22px 0}
+.layer{min-height:180px;padding:12px 10px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(160deg,#162b42,#0c1727);transition:.2s;position:relative}
+.layer .num{font-size:11px;color:var(--cyan);font-weight:800;letter-spacing:.1em}.layer h2{font-size:15px;margin:8px 0}.layer p{font-size:11px;line-height:1.45;color:var(--muted);margin:5px 0}.layer .pdu{font-size:10px;color:#d6e8f9;margin-top:10px;padding-top:8px;border-top:1px solid #2b4058}
+.layer.active{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan),0 0 28px #55cfff35;transform:translateY(-4px)}
+.layer.done{background:linear-gradient(160deg,#123d3b,#102638);border-color:#2d8877}
+.layer.active:after{content:"ACTIVE";position:absolute;top:-8px;right:8px;background:var(--cyan);color:#05111d;border-radius:5px;padding:3px 5px;font-size:9px;font-weight:900}
+.panel{border:1px solid var(--line);background:#0e1b2cdd;border-radius:14px;padding:17px;margin:14px 0}
+.progress{height:7px;background:#24354a;border-radius:99px;overflow:hidden;margin-top:12px}.progress div{height:100%;width:0;background:linear-gradient(90deg,#75e5ff,#63e6a2);transition:width .25s}
+.controls{display:flex;flex-wrap:wrap;gap:9px}button{border:0;border-radius:8px;padding:10px 14px;font-weight:750;background:var(--cyan);color:#07121f;cursor:pointer}button.alt{background:#263e58;color:#f1f7ff}button:focus-visible{outline:2px solid white;outline-offset:3px}
+#stageTitle{color:var(--cyan);font-size:19px;margin:0 0 8px}#stageText{line-height:1.6;color:#d2dfef}.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}.chip{display:inline-block;border:1px solid #31506c;border-radius:20px;padding:5px 9px;font-size:11px;color:#c2d8ec;margin:4px 4px 0 0}
+@media(max-width:900px){.cards{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:560px){main{padding:16px 10px}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.layer{min-height:150px}.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<h1>🌐 OSI Packet Journey</h1>
+<p class="sub">Follow a browser request as it moves down the sender's OSI layers, crosses the network, then moves up the receiver's layers. Use the controls to inspect each layer's role, protocol examples, and data unit.</p>
+<div class="panel">
+  <div class="controls">
+    <button id="next">Next step →</button><button id="play" class="alt">▶ Play journey</button><button id="reset" class="alt">↻ Reset</button>
+  </div>
+  <div class="progress"><div id="bar"></div></div>
+</div>
+<div class="cards" id="layers"></div>
+<div class="row">
+  <section class="panel">
+    <p class="chip" id="direction">SENDER · ENCAPSULATION</p>
+    <h2 id="stageTitle">Start at the Application Layer</h2>
+    <div id="stageText">An application creates the request data. Choose “Next step” to follow the request down the OSI model.</div>
+  </section>
+  <section class="panel">
+    <h2 style="margin-top:0">At a glance</h2>
+    <p><b>Encapsulation:</b> each sender layer adds the control information it needs.</p>
+    <p><b>Decapsulation:</b> the receiver examines and removes the relevant headers as data moves up the layers.</p>
+    <p><b>Important:</b> the OSI model is a conceptual reference model. Real protocol stacks do not always map one-to-one to its seven layers.</p>
+  </section>
+</div>
+</main>
+<script>
+const layers=[
+ {name:"Application",pdu:"Data",role:"Provides network services to applications.",examples:"HTTP / HTTPS · DNS · SMTP",example:"The browser prepares an HTTP request for a website."},
+ {name:"Presentation",pdu:"Data",role:"Represents, encodes, compresses, or encrypts application data.",examples:"TLS concepts · UTF-8 · JPEG",example:"Data is represented in an agreed format; encryption may be applied by protocols such as TLS."},
+ {name:"Session",pdu:"Data",role:"Coordinates logical conversations between applications.",examples:"Session management · RPC concepts",example:"The conversation/session context is coordinated where the application stack uses such a service."},
+ {name:"Transport",pdu:"Segment / Datagram",role:"Provides process-to-process delivery and may handle reliability.",examples:"TCP · UDP · Port numbers",example:"TCP segments data and uses ports to identify the communicating applications."},
+ {name:"Network",pdu:"Packet",role:"Provides logical addressing and routing between networks.",examples:"IPv4 · IPv6 · ICMP",example:"An IP packet carries source and destination IP addresses so routers can forward it."},
+ {name:"Data Link",pdu:"Frame",role:"Moves data across a local link and uses link-layer addressing.",examples:"Ethernet · Wi-Fi · MAC",example:"The packet is placed inside a link-layer frame for the next hop."},
+ {name:"Physical",pdu:"Bits",role:"Carries raw bits as electrical, optical, or radio signals.",examples:"Copper · Fiber · Radio",example:"The frame becomes a sequence of bits/signals travelling over the medium."}
+];
+const el=id=>document.getElementById(id);let step=-1,timer=null;
+function makeCards(){el("layers").innerHTML=layers.map((l,i)=>'<article class="layer" id="layer'+i+'"><div class="num">LAYER '+(7-i)+'</div><h2>'+l.name+'</h2><p>'+l.role+'</p><p class="pdu">PDU: '+l.pdu+'</p></article>').join("")}
+function render(){
+ const total=14;let idx=Math.min(step,total-1);
+ document.querySelectorAll(".layer").forEach(n=>n.classList.remove("active","done"));
+ if(step<0){el("direction").textContent="READY · ENCAPSULATION";el("stageTitle").textContent="Start at the Application Layer";el("stageText").textContent="An application creates the request data. Choose “Next step” to follow the request down the OSI model."}
+ else if(step<7){
+   const i=step;el("layer"+i).classList.add("active");
+   for(let j=0;j<i;j++)el("layer"+j).classList.add("done");
+   el("direction").textContent="SENDER · ENCAPSULATION · STEP "+(step+1)+" OF 14";
+   el("stageTitle").textContent="Layer "+(7-i)+": "+layers[i].name+" — "+layers[i].pdu;
+   el("stageText").textContent=layers[i].example+" "+layers[i].role;
+ }else{
+   const i=13-step;el("layer"+i).classList.add("active");
+   for(let j=i+1;j<7;j++)el("layer"+j).classList.add("done");
+   el("direction").textContent="RECEIVER · DECAPSULATION · STEP "+(step+1)+" OF 14";
+   el("stageTitle").textContent="Layer "+(7-i)+": "+layers[i].name+" — "+layers[i].pdu;
+   el("stageText").textContent="At the receiving endpoint, the "+layers[i].name+" layer processes the incoming "+layers[i].pdu.toLowerCase()+" and passes relevant data upward. "+layers[i].role;
+ }
+ el("bar").style.width=((step+1)/total*100)+"%";
+ el("next").textContent=step>=13?"Journey complete ✓":"Next step →";
+}
+function next(){if(step>=13){stop();return}step++;render();if(step>=13)stop()}
+function stop(){if(timer){clearInterval(timer);timer=null}el("play").textContent="▶ Play journey"}
+function play(){if(timer){stop();return}if(step>=13)step=-1;el("play").textContent="⏸ Pause";timer=setInterval(()=>{if(step>=13){stop();return}next()},1100)}
+el("next").addEventListener("click",next);
+el("play").addEventListener("click",play);
+el("reset").addEventListener("click",()=>{stop();step=-1;render()});
+makeCards();render();
+</script>
+</body>
+</html>
