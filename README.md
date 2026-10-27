@@ -415,3 +415,17 @@ MIT License – Feel free to use, modify, and share!
 [⭐ Star this repo](#) if it helped you learn! | [🐛 Report issues](#) | [💬 Discussions](#)
 
 </div>
+
+---
+
+## 🌐 Networking Projects Lab
+
+This repository also includes a separate beginner-friendly networking practice track. These are independent labs and do not change the FrozenLake Q-learning implementation.
+
+- [Interactive OSI Packet Journey](networking-projects/osi-packet-journey.html) — step through encapsulation and decapsulation across the seven OSI layers.
+- [IPv4 Subnet Calculator](networking-projects/subnet_calculator.py) — calculate CIDR, subnet mask, network/broadcast address, and usable hosts.
+- [DNS Lookup Tool](networking-projects/dns_lookup.py) — resolve hostnames and optionally perform reverse DNS lookup.
+- [TCP Echo Client/Server](networking-projects/tcp-echo/README.md) — practice TCP sockets and client/server communication on localhost.
+
+Start with the [Networking Projects guide](networking-projects/README.md) for commands and the recommended learning order.
+
